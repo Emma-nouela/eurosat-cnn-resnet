@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+
+# Datasets (downloaded at runtime via kagglehub)
+data/
+
+# Model checkpoints (too large to commit)
+*.pth
+
+# OS
+.DS_Store
+Thumbs.db
+
+# NOTE: results/*.png, *.csv and *.json are intentionally NOT ignored —
+# the figures (curves, confusion matrices, prediction grids, Optuna history)
+# are committed so they render in the README on GitHub.
