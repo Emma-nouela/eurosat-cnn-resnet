@@ -18,6 +18,10 @@ RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 # --------------------------------------------------------------------------- #
 # Dataset
 # --------------------------------------------------------------------------- #
+# Default (token-free) source: the public EuroSAT RGB archive on Zenodo.
+# No account, token or credentials required.
+ZENODO_RGB_URL = "https://zenodo.org/records/7711810/files/EuroSAT_RGB.zip?download=1"
+# Optional fallback source (requires a Kaggle API token / kaggle.json).
 KAGGLE_DATASET = "apollo2506/eurosat-dataset"
 
 # EuroSAT (RGB) classes — alphabetical, matching torchvision.ImageFolder ordering.

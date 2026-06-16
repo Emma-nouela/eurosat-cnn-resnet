@@ -16,7 +16,12 @@ The goal of this project is to **train, analyse and compare at least two differe
 learning models** for this classification task, evaluating their performance,
 capabilities and limitations.
 
-Dataset source (Kaggle): [`apollo2506/eurosat-dataset`](https://www.kaggle.com/datasets/apollo2506/eurosat-dataset)
+**Dataset source — downloads automatically, no token or account needed.** The code fetches
+the public **Zenodo** archive
+[`EuroSAT_RGB.zip`](https://zenodo.org/records/7711810) (~95 MB) using only the Python
+standard library. *(A Kaggle fallback —
+[`apollo2506/eurosat-dataset`](https://www.kaggle.com/datasets/apollo2506/eurosat-dataset) —
+is available via `download_dataset(source="kaggle")` but is **not** required.)*
 
 ## 2. The Idea (methodology)
 
@@ -68,10 +73,9 @@ To contrast two of the approaches suggested in the assignment, we implement and 
 1. Open `notebooks/EuroSAT_Classification.ipynb` in
    [Google Colab](https://colab.research.google.com/) and select a **GPU** runtime
    (*Runtime → Change runtime type → GPU*).
-2. Provide your Kaggle credentials when prompted (upload `kaggle.json`, available from
-   your Kaggle account → *Settings → API → Create New Token*).
-3. **Runtime → Run all.** The notebook downloads the data, trains both models, runs the
-   Optuna search, and renders all curves, confusion matrices and prediction grids.
+2. **Runtime → Run all.** No credentials needed — the dataset downloads automatically
+   from Zenodo. The notebook then trains both models, runs the Optuna search, and renders
+   all curves, confusion matrices and prediction grids.
 
 ### Option B — Local
 
@@ -82,17 +86,14 @@ python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\act
 # 2. install dependencies
 pip install -r requirements.txt
 
-# 3. configure Kaggle credentials (so kagglehub can download the dataset)
-#    place kaggle.json in ~/.kaggle/  (or %USERPROFILE%\.kaggle\ on Windows)
-
-# 4. train each model
+# 3. train each model (the dataset auto-downloads from Zenodo on first run — no token)
 python -m src.train --model cnn
 python -m src.train --model resnet
 
-# 5. tune hyperparameters with Optuna (5 trials)
+# 4. tune hyperparameters with Optuna (5 trials)
 python -m src.tune --model cnn
 
-# 6. evaluate on the test set (writes metrics + figures to results/)
+# 5. evaluate on the test set (writes metrics + figures to results/)
 python -m src.evaluate --model cnn
 python -m src.evaluate --model resnet
 ```

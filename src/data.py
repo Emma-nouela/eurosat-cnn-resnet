@@ -1,9 +1,13 @@
 """Data pipeline: download EuroSAT, build transforms, and create stratified loaders.
 
-The dataset is fetched with ``kagglehub`` (works on Colab and locally once Kaggle
-credentials are configured). We then build a *reproducible* stratified
-train/val/test split with scikit-learn so every run sees the same partition.
+By default the dataset is fetched **token-free** from the public Zenodo mirror
+(``EuroSAT_RGB.zip``) — no Kaggle account or API token is required. A ``kagglehub``
+fallback is kept for anyone who prefers it (``source="kaggle"``). We then build a
+*reproducible* stratified train/val/test split with scikit-learn so every run sees the
+same partition.
 """
+import urllib.request
+import zipfile
 from pathlib import Path
 
 import numpy as np
@@ -33,25 +37,78 @@ def find_image_root(base_path):
     )
 
 
-def download_dataset():
-    """Download the dataset via kagglehub and return its image root.
-
-    Falls back to ``config.DATA_DIR`` if the data was placed there manually.
-    """
+def _download_with_progress(url, dest):
+    """Download ``url`` to ``dest`` showing a tqdm progress bar (best-effort)."""
     try:
-        import kagglehub
+        from tqdm import tqdm
 
-        path = kagglehub.dataset_download(config.KAGGLE_DATASET)
-    except Exception as exc:  # noqa: BLE001 - we want a friendly fallback message
-        if config.DATA_DIR.exists():
-            path = config.DATA_DIR
-        else:
+        with tqdm(unit="B", unit_scale=True, unit_divisor=1024, desc="EuroSAT_RGB.zip") as bar:
+            def hook(block_num, block_size, total_size):
+                if total_size > 0:
+                    bar.total = total_size
+                bar.update(block_size)
+
+            urllib.request.urlretrieve(url, dest, reporthook=hook)
+    except ImportError:
+        urllib.request.urlretrieve(url, dest)
+
+
+def download_zenodo():
+    """Token-free download of the public EuroSAT RGB archive from Zenodo.
+
+    Idempotent: skips the download/extraction if the data is already present.
+    Returns the directory that contains the 10 class subfolders.
+    """
+    config.DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Already extracted? Reuse it.
+    try:
+        return find_image_root(config.DATA_DIR)
+    except FileNotFoundError:
+        pass
+
+    zip_path = config.DATA_DIR / "EuroSAT_RGB.zip"
+    if not zip_path.exists():
+        print(f"Downloading EuroSAT (RGB) from Zenodo — no token required:\n  {config.ZENODO_RGB_URL}")
+        _download_with_progress(config.ZENODO_RGB_URL, zip_path)
+
+    print("Extracting EuroSAT_RGB.zip ...")
+    with zipfile.ZipFile(zip_path) as zf:
+        zf.extractall(config.DATA_DIR)
+
+    return find_image_root(config.DATA_DIR)
+
+
+def download_kaggle():
+    """Optional fallback: download via kagglehub (requires a Kaggle API token)."""
+    import kagglehub
+
+    path = kagglehub.dataset_download(config.KAGGLE_DATASET)
+    return find_image_root(path)
+
+
+def download_dataset(source="zenodo"):
+    """Return the image root for EuroSAT, downloading if necessary.
+
+    Parameters
+    ----------
+    source : {"zenodo", "kaggle"}
+        ``"zenodo"`` (default) is token-free. ``"kaggle"`` uses kagglehub and
+        requires Kaggle credentials.
+    """
+    if source == "kaggle":
+        return download_kaggle()
+    if source == "zenodo":
+        try:
+            return download_zenodo()
+        except Exception as exc:  # noqa: BLE001 - friendly fallback to a manual copy
+            if config.DATA_DIR.exists():
+                return find_image_root(config.DATA_DIR)
             raise RuntimeError(
-                "Dataset download failed and no local data was found. Configure your "
-                "Kaggle credentials, or place the extracted dataset under ./data. "
+                "Zenodo download failed and no local data was found under ./data. "
                 f"Original error: {exc}"
             ) from exc
-    return find_image_root(path)
+    raise ValueError(f"Unknown source: {source!r} (expected 'zenodo' or 'kaggle').")
 
 
 def build_transforms(img_size, train, mean, std):
